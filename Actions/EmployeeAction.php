@@ -14,10 +14,12 @@ $employeeObj = new Employee();
 
 if ($call == "getDataByPage") {
     $page = $_GET["pageNumber"];
-    $data = $employeeMgr->getDataByPage($page);
-    $response = new ArrayObject();
+    $lastfetchedId = $_GET["lastFetchedID"];
+    $conditionalData = $employeeMgr->getDataByPage($page, $lastfetchedId);
     $response["success"] =  1;
-    $response["emps"] = $data;
+    $response["emps"] = $conditionalData["data"];
+    $response["totalEntries"] = $conditionalData["rows"];
+    $response["lastID"] = end($conditionalData["data"])["id"];
     echo json_encode($response);
 }
 
@@ -72,4 +74,27 @@ if ($call == "deleteEmployee") {
         $response["success"] = 1;
         echo json_encode($response);
     }
+}
+
+if ($call == "deleteSelectedEmployees") {
+    $ids = $_GET["ids"];
+    $res = $employeeMgr->deleteSelectedEmployees($ids);
+    if ($res === 1) {
+        $response["success"] = 1;
+        echo json_encode($response);
+    }
+}
+
+if ($call == "getTotalRowsInDb") {
+    $res = $employeeMgr->getTotalRowsInDb($call);
+    $response["totalRows"] = $res;
+    echo json_encode($response);
+}
+if ($call == "searchEmployee") {
+    $searchSlug = $_GET["searchSlug"];
+    $res = $employeeMgr->searchEmployee($searchSlug);
+    $response["success"] = 1;
+    $response["emps"] = $res;
+    $response["totalEntries"] = count($res);
+    echo json_encode($response);
 }
