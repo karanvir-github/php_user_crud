@@ -29,19 +29,21 @@ class EmpMgr
         return $result;
     }
 
-    public function getDataByPage($page, $lastfetchedId)
+    public function getDataByPage($pageToServe, $lastPageServed)
     {
         $conditionalData["rows"] = self::getTotalRowsInDb();
-        $conditionalId = $conditionalData["rows"] - ($page * 5);
-        if ($page == 1) {
-            $sql = "Select * from emps order by id desc limit 5";
+        $differncy = $pageToServe - $lastPageServed;
+        if ($differncy > 0) {
+            $offSet = 5 * $differncy;
+            $sql = "Select * from emps order by id desc limit 5 offset $offSet";
         } else {
-            $sql = "Select * from emps where id >= $conditionalId limit 5";
+            $sql = "Select * from emps order by id desc limit 5";
         }
         try {
             $stmt = self::getEmpDB()->query($sql);
             $stmt->execute();
             $conditionalData["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $conditionalData["lastPageServed"] = $lastPageServed;
         } catch (PDOException $e) {
             return "Error: " . $e->getMessage();
         }
@@ -112,6 +114,19 @@ class EmpMgr
             $stmt = self::getEmpDB()->query($sql);
             $stmt->execute();
             $res = $stmt->fetchColumn();
+        } catch (PDOException $e) {
+            $res = $e->getMessage();
+        }
+        return $res;
+    }
+
+    public function searchEmployeeWithFilter($searchSlug, $condition)
+    {
+        $sql = "select * from emps where $condition LIKE '%$searchSlug%' order by id desc";
+        try {
+            $stmt = self::getEmpDB()->query($sql);
+            $stmt->execute();
+            $res = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             $res = $e->getMessage();
         }

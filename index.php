@@ -32,10 +32,18 @@
                 <div class="row mb-3 ml-2">
                     <form method="GET" id="searchForm">
                         <div class="form-row">
-                            <div class="col-10">
+                            <div class="col-6">
                                 <input type="text" name="searchData" id="searchData" class="form-control">
                             </div>
-                            <div class="col">
+                            <div class="col-4">
+                                <select class="custom-select" name="searchfilter" id="searchWithFilter">
+                                    <option value="0">Everywhere</option>
+                                    <option value="firstname">First Name</option>
+                                    <option value="lastname">Last Name</option>
+                                    <option value="email">Email</option>
+                                </select>
+                            </div>
+                            <div class="col-2">
                                 <input type="submit" class="btn btn-info" value="Search">
                             </div>
                         </div>
@@ -51,7 +59,7 @@
                                     <label for="selectAll"></label>
                                 </span>
                             </th>
-                            <th>ID</th>
+                            <th>S/N</th>
                             <th>First name</th>
                             <th>Last name</th>
                             <th>Email</th>
@@ -217,8 +225,8 @@
     function addPageNumbers(pageNum = null) {
         pageNum = pageNum != null ? pageNum : 1;
         subCondition = pageNum
-        totalPageNumberstoBuild = 10
-        // totalPageNumbertoBuild = Math.ceil(totalRows / 5)
+        // totalPageNumberstoBuild = 10
+        totalPageNumberstoBuild = Math.ceil(totalRows / 5)
         $(".pagination").each(function() {
             $(".pagination").html('');
             if (subCondition < totalPageNumberstoBuild) {
@@ -231,8 +239,8 @@
                     getLastPages = pageNum - 5
                     $(".pagination").append('<li class="page-item"><a href="javascript:addPageNumbers(' + getLastPages + ')" class="page-link">Previous</a></li>');
                 }
-                while (pageNum <= subCondition) {
-                    $(".pagination").append('<li class="page-item"><a href="javascript:getDataByPage(' + pageNum + ')" class="page-link">' + pageNum + '</a></li>');
+                while (pageNum <= subCondition && pageNum <= totalPageNumberstoBuild) {
+                    $(".pagination").append('<li id="toActiveCurrPage' + pageNum + '" class="removeClassActive page-item"><a href="javascript:getDataByPage(' + pageNum + ')" class="page-link">' + pageNum + '</a></li>');
                     pageNum += 1
                 }
                 if (pageNum < totalPageNumberstoBuild) {
@@ -244,31 +252,42 @@
         });
     }
 
-    lastfetchedId = 0
-
+    lastPageServed = 1
     // get data by page
-    function getDataByPage(page) {
-        url = "Actions/EmployeeAction.php?call=getDataByPage&pageNumber=" + page + "&lastFetchedID=" + lastfetchedId;
+    function getDataByPage(pageToServe) {
+        url = "Actions/EmployeeAction.php?call=getDataByPage&pageToServe=" + pageToServe + "&lastPageServed=" + lastPageServed;
         $.getJSON(url, function(data) {
             let html = "";
             $("#employeeRecordTbl").html(html);
-            $.each(data.emps, function(key, value) {
-                $("#seeTotalEntries").html(data.totalEntries)
-                lastfetchedId = data.lastID
-                html = "<tr>";
-                html += "<td><span class='custom-checkbox'><input type='checkbox' onClick='getCheckedValues()' value='" + value.id + "'><label for='checkbox'></label></span></td>";
-                html += "<td>" + value.id + "</td>";
-                html += "<td>" + value.firstname + "</td>";
-                html += "<td>" + value.lastname + "</td>";
-                html += "<td>" + value.email + "</td>";
-                html += "<td>" + value.dob + "";
-                html += "<td>";
-                html += "<a onclick='javascript:editEmployee(" + value.id + ")' class='edit' data-toggle='modal'><i class='material-icons' data-toggle='tooltip' title='Edit' style='cursor:pointer !important'>&#xE254;</i></a>";
-                html += "<a onclick='javascript:deleteEmployee(" + value.id + ")' class='delete' data-toggle='modal'><i class='material-icons' data-toggle='tooltip' title='Delete' style='cursor:pointer !important'>&#xE872;</i></a>";
-                html += "</td>";
-                html += "</tr>";
+            if (data.emps == "") {
+                html = "<tr><td class='text-center' colspan='6'>No data found</td></tr>";
                 $("#employeeRecordTbl").append(html);
-            });
+            } else {
+                let i = 1
+                if (pageToServe > 1) {
+                    i = pageToServe * 5
+                }
+                $.each(data.emps, function(key, value) {
+                    $("#seeTotalEntries").html(data.totalEntries)
+                    lastPageServed = data.lastPageServed
+                    html = "<tr>";
+                    html += "<td><span class='custom-checkbox'><input type='checkbox' onClick='getCheckedValues()' value='" + value.id + "'><label for='checkbox'></label></span></td>";
+                    html += "<td>" + i + "</td>";
+                    html += "<td>" + value.firstname + "</td>";
+                    html += "<td>" + value.lastname + "</td>";
+                    html += "<td>" + value.email + "</td>";
+                    html += "<td>" + value.dob + "";
+                    html += "<td>";
+                    html += "<a onclick='javascript:editEmployee(" + value.id + ")' class='edit' data-toggle='modal'><i class='material-icons' data-toggle='tooltip' title='Edit' style='cursor:pointer !important'>&#xE254;</i></a>";
+                    html += "<a onclick='javascript:deleteEmployee(" + value.id + ")' class='delete' data-toggle='modal'><i class='material-icons' data-toggle='tooltip' title='Delete' style='cursor:pointer !important'>&#xE872;</i></a>";
+                    html += "</td>";
+                    html += "</tr>";
+                    $("#employeeRecordTbl").append(html);
+                    i += 1
+                });
+                $(".removeClassActive").removeClass('active')
+                $("#toActiveCurrPage" + pageToServe).addClass('active')
+            }
         });
     }
 
@@ -384,34 +403,47 @@
 
     $("#searchForm").submit(function(e) {
         e.preventDefault();
+        selectedFilter = $('#searchWithFilter').find(":selected").val();
         let searchData = $("#searchData").val();
         if (searchData == "" || searchData == null) {
             alert("Please enter some data to search")
         } else {
-            url = "Actions/EmployeeAction.php?call=searchEmployee&searchSlug=" + searchData
+            if (selectedFilter != 0) {
+                url = "Actions/EmployeeAction.php?call=searchEmployeeWithFilter&searchSlug=" + searchData + "&condition=" + selectedFilter
+            } else {
+                url = "Actions/EmployeeAction.php?call=searchEmployee&searchSlug=" + searchData
+            }
             $.getJSON(url, function(data) {
                 if (data.success === 1) {
                     $(".pagination").html('')
                     searchData.replace(searchData, '<b>' + searchData + '</b>');
                     let html = "";
                     $("#employeeRecordTbl").html(html);
-                    $.each(data.emps, function(key, value) {
-                        $(".hint-text").html(data.totalEntries + ' entries found in the search result')
-                        lastfetchedId = data.lastID
-                        html = "<tr>";
-                        html += "<td><span class='custom-checkbox'><input type='checkbox' onClick='getCheckedValues()' value='" + value.id + "'><label for='checkbox'></label></span></td>";
-                        html += "<td>" + value.id + "</td>";
-                        html += "<td>" + value.firstname + "</td>";
-                        html += "<td>" + value.lastname + "</td>";
-                        html += "<td>" + value.email + "</td>";
-                        html += "<td>" + value.dob + "";
-                        html += "<td>";
-                        html += "<a onclick='javascript:editEmployee(" + value.id + ")' class='edit' data-toggle='modal'><i class='material-icons' data-toggle='tooltip' title='Edit' style='cursor:pointer !important'>&#xE254;</i></a>";
-                        html += "<a onclick='javascript:deleteEmployee(" + value.id + ")' class='delete' data-toggle='modal'><i class='material-icons' data-toggle='tooltip' title='Delete' style='cursor:pointer !important'>&#xE872;</i></a>";
-                        html += "</td>";
-                        html += "</tr>";
+                    if (data.emps == "") {
+                        $(".hint-text").html('')
+                        html = "<tr><td class='text-center' colspan='6'>No data found</td></tr>";
                         $("#employeeRecordTbl").append(html);
-                    });
+                    } else {
+                        let i = 1
+                        $.each(data.emps, function(key, value) {
+                            $(".hint-text").html(data.totalEntries + ' entries found in the search result')
+                            lastfetchedId = data.lastID
+                            html = "<tr>";
+                            html += "<td><span class='custom-checkbox'><input type='checkbox' onClick='getCheckedValues()' value='" + value.id + "'><label for='checkbox'></label></span></td>";
+                            html += "<td>" + i + "</td>";
+                            html += "<td>" + value.firstname + "</td>";
+                            html += "<td>" + value.lastname + "</td>";
+                            html += "<td>" + value.email + "</td>";
+                            html += "<td>" + value.dob + "";
+                            html += "<td>";
+                            html += "<a onclick='javascript:editEmployee(" + value.id + ")' class='edit' data-toggle='modal'><i class='material-icons' data-toggle='tooltip' title='Edit' style='cursor:pointer !important'>&#xE254;</i></a>";
+                            html += "<a onclick='javascript:deleteEmployee(" + value.id + ")' class='delete' data-toggle='modal'><i class='material-icons' data-toggle='tooltip' title='Delete' style='cursor:pointer !important'>&#xE872;</i></a>";
+                            html += "</td>";
+                            html += "</tr>";
+                            $("#employeeRecordTbl").append(html);
+                            i += 1
+                        });
+                    }
                 }
             })
         }

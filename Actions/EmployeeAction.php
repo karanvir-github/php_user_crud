@@ -13,13 +13,17 @@ $employeeMgr = new EmpMgr();
 $employeeObj = new Employee();
 
 if ($call == "getDataByPage") {
-    $page = $_GET["pageNumber"];
-    $lastfetchedId = $_GET["lastFetchedID"];
-    $conditionalData = $employeeMgr->getDataByPage($page, $lastfetchedId);
+    $pageToServe = $_GET["pageToServe"];
+    $lastPageServed = $_GET["lastPageServed"];
+    $conditionalData = $employeeMgr->getDataByPage($pageToServe, $lastPageServed);
     $response["success"] =  1;
-    $response["emps"] = $conditionalData["data"];
-    $response["totalEntries"] = $conditionalData["rows"];
-    $response["lastID"] = end($conditionalData["data"])["id"];
+    if ($conditionalData["data"] == NULL) {
+        $response["emps"] = "";
+    } else {
+        $response["emps"] = $conditionalData["data"];
+        $response["totalEntries"] = $conditionalData["rows"];
+        $response["lastPageServed"] = $conditionalData["lastPageServed"];
+    }
     echo json_encode($response);
 }
 
@@ -90,11 +94,30 @@ if ($call == "getTotalRowsInDb") {
     $response["totalRows"] = $res;
     echo json_encode($response);
 }
+
+if ($call == "searchEmployeeWithFilter") {
+    $searchSlug = $_GET["searchSlug"];
+    $condition = $_GET["condition"];
+    $res = $employeeMgr->searchEmployeeWithFilter($searchSlug, $condition);
+    $response["success"] = 1;
+    if ($res == NULL) {
+        $response["emps"] = "";
+    } else {
+        $response["emps"] = $res;
+        $response["totalEntries"] = count($res);
+    }
+    echo json_encode($response);
+}
+
 if ($call == "searchEmployee") {
     $searchSlug = $_GET["searchSlug"];
     $res = $employeeMgr->searchEmployee($searchSlug);
     $response["success"] = 1;
-    $response["emps"] = $res;
-    $response["totalEntries"] = count($res);
+    if ($res == NULL) {
+        $response["emps"] = "";
+    } else {
+        $response["emps"] = $res;
+        $response["totalEntries"] = count($res);
+    }
     echo json_encode($response);
 }
