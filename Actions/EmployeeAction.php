@@ -13,11 +13,17 @@ $employeeMgr = new EmpMgr();
 $employeeObj = new Employee();
 
 if ($call == "getDataByPage") {
-    $page = $_GET["pageNumber"];
-    $data = $employeeMgr->getDataByPage($page);
-    $response = new ArrayObject();
+    $pageToServe = $_GET["pageToServe"];
+    $lastPageServed = $_GET["lastPageServed"];
+    $conditionalData = $employeeMgr->getDataByPage($pageToServe, $lastPageServed);
     $response["success"] =  1;
-    $response["emps"] = $data;
+    if ($conditionalData["data"] == NULL) {
+        $response["emps"] = "";
+    } else {
+        $response["emps"] = $conditionalData["data"];
+        $response["totalEntries"] = $conditionalData["rows"];
+        $response["lastPageServed"] = $conditionalData["lastPageServed"];
+    }
     echo json_encode($response);
 }
 
@@ -72,4 +78,46 @@ if ($call == "deleteEmployee") {
         $response["success"] = 1;
         echo json_encode($response);
     }
+}
+
+if ($call == "deleteSelectedEmployees") {
+    $ids = $_GET["ids"];
+    $res = $employeeMgr->deleteSelectedEmployees($ids);
+    if ($res === 1) {
+        $response["success"] = 1;
+        echo json_encode($response);
+    }
+}
+
+if ($call == "getTotalRowsInDb") {
+    $res = $employeeMgr->getTotalRowsInDb($call);
+    $response["totalRows"] = $res;
+    echo json_encode($response);
+}
+
+if ($call == "searchEmployeeWithFilter") {
+    $searchSlug = $_GET["searchSlug"];
+    $condition = $_GET["condition"];
+    $res = $employeeMgr->searchEmployeeWithFilter($searchSlug, $condition);
+    $response["success"] = 1;
+    if ($res == NULL) {
+        $response["emps"] = "";
+    } else {
+        $response["emps"] = $res;
+        $response["totalEntries"] = count($res);
+    }
+    echo json_encode($response);
+}
+
+if ($call == "searchEmployee") {
+    $searchSlug = $_GET["searchSlug"];
+    $res = $employeeMgr->searchEmployee($searchSlug);
+    $response["success"] = 1;
+    if ($res == NULL) {
+        $response["emps"] = "";
+    } else {
+        $response["emps"] = $res;
+        $response["totalEntries"] = count($res);
+    }
+    echo json_encode($response);
 }
