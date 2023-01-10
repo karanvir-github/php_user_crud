@@ -1,4 +1,4 @@
-Features: '\n'
+Features:
 👉Data Filtering
 👉Data Search
 👉Pagination
